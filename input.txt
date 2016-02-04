@@ -1,0 +1,3 @@
+#sample_id	tumour	normal
+<tid_nid_1>	<tumour bam file path>	<normal bam file path>
+<tid_nid_2>	<tumour bam file path>>	<normal bam file path>

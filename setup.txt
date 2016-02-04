@@ -1,0 +1,15 @@
+#section	key	value
+__GENERAL__	python	<path to python executable, e.g. python>
+__GENERAL__	java	<path to jave executable, e.g. java>
+__GENERAL__	strelka	<path to /strelka_install_dir/bin/configureStrelkaWorkflow.pl> 
+__GENERAL__	perl	<path to perl executable, e.g. perl
+__GENERAL__	samtools	<path to samtools executable, e.g. samtools>
+__SHARED__	strelka_ref	<path to the reference genome>
+__SHARED__	ld_library_path	<path(s) to export to LD_LIBRARY_PATH env variable>
+__SHARED__	dbsnp	<path to the dbsnp positions file in chr:from-to format)>
+__SHARED__	thousand_genomes	<path to the thousand genomes db file>
+__SHARED__	mutation_assessor_db	<path to mutation_assessor_db directory>
+__SHARED__	cosmic_db	<path to cosmic db file>
+__SHARED__	isSkipDepthFilters	<set to True for exomes, otherwise False>
+__SHARED__	java_exe	<path to java executable>
+__SHARED__	tabix_path	<path to tabix directory>

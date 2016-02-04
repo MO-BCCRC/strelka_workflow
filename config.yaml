@@ -1,0 +1,402 @@
+__PIPELINE_INFO__:
+    name: strelka
+    version: 6.0
+    author: Jamie Rosner
+    data_type: 'strelka'
+    input_type: 'bam'
+    output_type: 'vcf'
+    host_cluster: None
+    date_created: 28 Nov 2014
+    date_last_updated: 2 Feb 2016 by jtaghiyar
+    kronos_version: '2.0.4'
+__GENERAL__:
+    python: 'path to python'
+    java: 'path to java'
+    strelka: 'path to strelka'
+    perl: 'path to perl'
+    samtools: 'path to samtools'
+__SHARED__:
+    strelka_ref: 'path to the reference genome'
+    ld_library_path: 'path(s) to export to LD_LIBRARY_PATH env variable'
+    dbsnp: 'path to the dbsnp positions file in chr:from-to format)'
+    thousand_genomes: 'path to the thousand genomes db file'
+    mutation_assessor_db: 'path to mutation_assessor_db directory'
+    cosmic_db: 'path to cosmic db file'
+    isSkipDepthFilters: 'set to True for exomes'
+    java_exe: 'path to java executable'
+    tabix_path: 'path to tabix directory'
+__SAMPLES__:
+#    <tumour-id>_<normal-id>:
+#        tumour: 'path to the tumour bam file'
+#        normal: 'path to the normal bam file'
+__TASK_1__:
+    reserved:
+        # do not change this section.
+        component_name: 'run_strelka'
+        component_version: '1.2.0'
+        seed_version: '1.0.13'
+    run:
+        # NOTE: component cannot run in parallel mode.
+        use_cluster: True
+        memory: '10G'
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+        boilerplate:
+    component:
+        input_files:
+            tumour: ('__SAMPLES__', 'tumour')
+            config: '__OPTIONAL__'
+            ref: ('__SHARED__','strelka_ref')
+            normal: ('__SAMPLES__', 'normal')
+        output_files:
+            output_dir: strelka_output
+        parameters:
+            num_procs: 8
+            isSkipDepthFilters: ('__SHARED__','isSkipDepthFilters')
+__TASK_2__:
+    reserved:
+        # do not change this section.
+        component_name: 'run_snpeff'
+        component_version: '1.0.2'
+        seed_version: 'SnpEff 3.6b (build 2014-05-01)'
+    run:
+        use_cluster: True
+        memory: '8G'
+        forced_dependencies: ['__TASK_1__']
+        add_breakpoint: False
+        env_vars:
+        boilerplate:
+        parallel_run: False
+        parallel_params: []
+        interval_file:
+    component:
+        input_files:
+            variants_file: passed.somatic.snvs.vcf
+            config: 'snpEff_3_6/snpEff.config'
+        output_files:
+            stats: 'snpEff_summary.html'
+            out: 'strelka.passed.somatic.snvs.annotSnpEff.vcf'
+        parameters:
+            upDownStreamLen: '__OPTIONAL__'
+            verbose: '__FLAG__'
+            cancer: '__FLAG__'
+            treatAllAsProteinCoding: '__OPTIONAL__'
+            one: '__FLAG__'
+            dataDir: '__OPTIONAL__'
+            'no': '__OPTIONAL__'
+            outOffset: '__FLAG__'
+            help: '__FLAG__'
+            het: '__FLAG__'
+            oicr: '__FLAG__'
+            lof: '__FLAG__'
+            no_utr: '__FLAG__'
+            minC: '__OPTIONAL__'
+            sequenceOntology: '__FLAG__'
+            chr: '__OPTIONAL__'
+            around: '__FLAG__'
+            output_format: 'vcf'
+            cvsStats: '__FLAG__'
+            no_intergenic: '__FLAG__'
+            noLog: '__FLAG__'
+            noStats: True
+            del: '__FLAG__'
+            debug: '__FLAG__'
+            motif: '__FLAG__'
+            input_format: 'vcf'
+            maxQ: '__OPTIONAL__'
+            canon: '__FLAG__'
+            ins: '__FLAG__'
+            zero: '__FLAG__'
+            genome_version: 'GRCh37.66'
+            no_intron: '__FLAG__'
+            download: '__FLAG__'
+            maxC: '__OPTIONAL__'
+            cancerSamples: '__OPTIONAL__'
+            hom: '__FLAG__'
+            no_downstream: '__FLAG__'
+            hgvs: '__FLAG__'
+            minQ: '__OPTIONAL__'
+            reg: '__OPTIONAL__'
+            geneId: '__FLAG__'
+            onlyReg: '__FLAG__'
+            nmp: '__FLAG__'
+            threads: '__OPTIONAL__'
+            snp: '__FLAG__'
+            no_upstream: '__FLAG__'
+            interval: '__OPTIONAL__'
+            quiet: '__FLAG__'
+            filterInterval: '__OPTIONAL__'
+            inOffset: '__FLAG__'
+__TASK_2a__:
+    reserved:
+        # do not change this section.
+        component_name: 'annot_mutationassessor_vcf'
+        component_version: '1.0.1'
+        seed_version: '1.0.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: False
+        parallel_params: ['vcf']
+        interval_file:
+    component:
+        input_files:
+            db: ('__SHARED__', 'mutation_assessor_db')
+            vcf: ('__TASK_2__', 'out')
+        output_files:
+            output: strelka.passed.somatic.snvs.annotSnpEff.annotMA.vcf
+        parameters:
+__TASK_3__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: True
+        parallel_params: ['infile']
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'dbsnp')
+            infile: ('__TASK_2a__', 'output')
+        output_files:
+            out: strelka.passed.somatic.snvs.annotSnpEff.annotMA.flagDBsnp.vcf
+        parameters:
+            label: DBSNP
+            flag_with_id: True
+            input_type: 'snv'
+            tabix_path: ('__SHARED__','tabix_path')
+__TASK_4__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: True
+        parallel_params: ['infile']
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'thousand_genomes')
+            infile: ('__TASK_3__', 'out')
+        output_files:
+            out: 'strelka.passed.somatic.snvs.annotSnpEff.annotMA.flagDBsnp.flag1000gen.vcf'
+        parameters:
+            label: 1000Gen
+            flag_with_id: '__FLAG__'
+            input_type: 'snv'
+            tabix_path: ('__SHARED__','tabix_path')
+__TASK_4a__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: False
+        parallel_params: []
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'cosmic_db')
+            infile: ('__TASK_4__', 'out')
+        output_files:
+            out: 'results/${sample_id}_strelka.passed.somatic.snvs.annotSnpEff.annotMA.flagDBsnp.flag1000gen.flagCosmic.vcf'
+        parameters:
+            label: Cosmic
+            flag_with_id: True
+            input_type: 'snv'
+            tabix_path: ('__SHARED__','tabix_path')
+__TASK_5__:
+    reserved:
+        # do not change this section.
+        component_name: 'run_snpeff'
+        component_version: '1.0.2'
+        seed_version: 'SnpEff 3.6b (build 2014-05-01)'
+    run:
+        use_cluster: True
+        memory: '8G'
+        forced_dependencies: ['__TASK_1__']
+        add_breakpoint: False
+        env_vars:
+        boilerplate:
+        parallel_run: False
+        parallel_params: []
+        interval_file:
+    component:
+        input_files:
+            variants_file: passed.somatic.indels.vcf
+            config: 'snpEff_3_6/snpEff.config'
+        output_files:
+            stats: 'snpEff_summary.html'
+            out: 'strelka.passed.somatic.indels.annotSnpEff.vcf'
+        parameters:
+            upDownStreamLen: '__OPTIONAL__'
+            verbose: '__FLAG__'
+            cancer: '__FLAG__'
+            treatAllAsProteinCoding: '__OPTIONAL__'
+            one: '__FLAG__'
+            dataDir: '__OPTIONAL__'
+            'no': '__OPTIONAL__'
+            outOffset: '__FLAG__'
+            help: '__FLAG__'
+            het: '__FLAG__'
+            oicr: '__FLAG__'
+            lof: '__FLAG__'
+            no_utr: '__FLAG__'
+            minC: '__OPTIONAL__'
+            sequenceOntology: '__FLAG__'
+            chr: '__OPTIONAL__'
+            around: '__FLAG__'
+            output_format: 'vcf'
+            cvsStats: '__FLAG__'
+            no_intergenic: '__FLAG__'
+            noLog: '__FLAG__'
+            noStats: True
+            del: '__FLAG__'
+            debug: '__FLAG__'
+            motif: '__FLAG__'
+            input_format: 'vcf'
+            maxQ: '__OPTIONAL__'
+            canon: '__FLAG__'
+            ins: '__FLAG__'
+            zero: '__FLAG__'
+            genome_version: 'GRCh37.66'
+            no_intron: '__FLAG__'
+            download: '__FLAG__'
+            maxC: '__OPTIONAL__'
+            cancerSamples: '__OPTIONAL__'
+            hom: '__FLAG__'
+            no_downstream: '__FLAG__'
+            hgvs: '__FLAG__'
+            minQ: '__OPTIONAL__'
+            reg: '__OPTIONAL__'
+            geneId: '__FLAG__'
+            onlyReg: '__FLAG__'
+            nmp: '__FLAG__'
+            threads: '__OPTIONAL__'
+            snp: '__FLAG__'
+            no_upstream: '__FLAG__'
+            interval: '__OPTIONAL__'
+            quiet: '__FLAG__'
+            filterInterval: '__OPTIONAL__'
+            inOffset: '__FLAG__'
+__TASK_6__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: True
+        parallel_params: ['infile']
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'dbsnp')
+            infile: ('__TASK_5__', 'out')
+        output_files:
+            out: strelka.passed.somatic.indels.annotSnpEff.annotMA.flagDBsnp.vcf
+        parameters:
+            label: DBSNP
+            flag_with_id: True
+            input_type: 'indel'
+            tabix_path: ('__SHARED__','tabix_path')
+__TASK_7__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: True
+        parallel_params: ['infile']
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'thousand_genomes')
+            infile: ('__TASK_6__', 'out')
+        output_files:
+            out: 'strelka.passed.somatic.indels.annotSnpEff.annotMA.flagDBsnp.flag1000gen.vcf'
+        parameters:
+            label: 1000Gen
+            flag_with_id: '__FLAG__'
+            input_type: 'indel'
+            tabix_path: ('__SHARED__','tabix_path')
+__TASK_7a__:
+    reserved:
+        # do not change this section.
+        component_name: 'flag_positions_vcf'
+        component_version: '1.0.3'
+        seed_version: '1.2.0'
+    run:
+        use_cluster: True
+        memory: '10G'
+        num_cpus: 1
+        forced_dependencies: []
+        add_breakpoint: False
+        env_vars:
+            LD_LIBRARY_PATH: ('__SHARED__', 'ld_library_path')
+        boilerplate:
+        parallel_run: False
+        parallel_params: []
+        interval_file: null
+    component:
+        input_files:
+            db: ('__SHARED__', 'cosmic_db')
+            infile: ('__TASK_7__', 'out')
+        output_files:
+            out: 'results/${sample_id}_strelka.passed.somatic.indels.annotSnpEff.annotMA.flagDBsnp.flag1000gen.flagCosmic.vcf'
+        parameters:
+            label: Cosmic
+            flag_with_id: True
+            input_type: 'indel'
+            tabix_path: ('__SHARED__','tabix_path')
